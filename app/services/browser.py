@@ -1,6 +1,6 @@
 import undetected_chromedriver as uc
 import logging
-import os
+from app.core.config import settings
 
 logger = logging.getLogger("New_Bot.Browser")
 
@@ -13,18 +13,17 @@ class BrowserService:
         options.add_argument("--headless=new")
         options.add_argument("--window-size=1920,1080")
         
-        # Flags de estabilidade para evitar travamento em VM
+        # PERSISTÊNCIA: Usa a pasta configurada para salvar o login
+        options.add_argument(f"--user-data-dir={settings.PROFILE_PATH}")
+        
+        # Otimizacao de servidor
         options.add_argument("--disable-gpu")
-        options.add_argument("--disable-software-rasterizer")
-        options.add_argument("--remote-debugging-port=9222") 
-
+        options.add_argument("--disable-renderer-backgrounding")
+        
         try:
-            logger.info("Iniciando instancia do Chrome...")
             driver = uc.Chrome(options=options)
-            driver.set_page_load_timeout(45) # Timeout estendido
-            logger.info("Chrome iniciado. Removendo rastro de automacao...")
-            driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            driver.set_page_load_timeout(settings.TIMEOUT)
             return driver
         except Exception as e:
-            logger.error(f"FALHA NO MOTOR: {e}")
+            logger.error(f"Erro ao iniciar Chrome: {e}")
             raise
