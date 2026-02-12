@@ -22,9 +22,11 @@ def executar_ciclo():
         for vila in settings.VILAS:
             logger.info(f"========== {vila['nome']} ==========")
             
-            # Acesso direto ao atributo BASE_URL
             url_alvo = settings.BASE_URL + vila['link']
+            logger.info(f"Tentando carregar: {url_alvo}")
+            
             driver.get(url_alvo)
+            logger.info("Pagina carregada. Iniciando leitura de recursos...")
             
             recursos = bot.obter_recursos()
             if not recursos:
@@ -54,7 +56,7 @@ def executar_ciclo():
             logger.info("Navegador encerrado.")
 
 if __name__ == "__main__":
-    logger.info(f"=== {settings.PROJECT_NAME} v1.0.4 ATIVADO ===")
+    logger.info(f"=== {settings.PROJECT_NAME} v1.0.6 ATIVADO ===")
     while True:
         try:
             executar_ciclo()

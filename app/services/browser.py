@@ -9,16 +9,20 @@ class BrowserService:
         options = uc.ChromeOptions()
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        # Headless=new é o padrão moderno que não é detectado facilmente
         options.add_argument("--headless=new")
         options.add_argument("--window-size=1920,1080")
         
+        # Flags para evitar que o processo trave em servidores
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-renderer-backgrounding")
+        options.add_argument("--disable-background-timer-throttling")
+        
         try:
-            # O UC baixa o driver automaticamente compatível com o Chrome da VM
             driver = uc.Chrome(options=options)
-            # Stealth extra: Remove rastros de automação via JS
+            driver.set_page_load_timeout(30) # Timeout de 30s
             driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            logger.info("Motor Desktop UC iniciado com sucesso.")
+            logger.info("Motor Desktop UC iniciado e otimizado para Cloud.")
             return driver
         except Exception as e:
             logger.error(f"Erro ao iniciar Undetected-Chromedriver: {e}")
