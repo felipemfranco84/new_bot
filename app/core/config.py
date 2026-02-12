@@ -1,6 +1,8 @@
+import os
+
 class Settings:
     PROJECT_NAME: str = "New_Bot_Cloud"
-    # Certifique-se de que o nome seja BASE_URL (em maiúsculas)
+    # O nome deve ser EXATAMENTE BASE_URL (maiusculo)
     BASE_URL: str = "https://nys.x1.america.travian.com/"
     
     VILAS = [
