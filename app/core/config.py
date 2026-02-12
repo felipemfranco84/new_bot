@@ -6,7 +6,7 @@ class Settings:
     
     # ADICIONE SEU USUARIO E SENHA AQUI
     USER: str = "felipemfranco@outlook.com"
-    PASS: str = "SUA_SENHAQlydludg@1984"
+    PASS: str = "Qlydludg@1984"
     
     # Persistência de Cookies
     PROFILE_PATH: str = os.path.abspath("./app/core/user_data")
