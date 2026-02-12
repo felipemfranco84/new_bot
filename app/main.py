@@ -2,14 +2,22 @@ import logging
 import time
 import random
 import sys
+import os
 from app.services.browser import BrowserService
 from app.services.bot import BotService
 from app.core.config import settings
 
+# Garante que a pasta de logs existe
+os.makedirs("logs", exist_ok=True)
+
+# Configuracao de Log Duplo (Terminal + Arquivo)
 logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s | %(levelname)s | %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("logs/execucao.log", encoding='utf-8')
+    ]
 )
 logger = logging.getLogger("New_Bot.Main")
 
@@ -20,51 +28,46 @@ def executar_ciclo():
         bot = BotService(driver)
         
         for vila in settings.VILAS:
-            logger.info(f"========== {vila['nome']} ==========")
+            logger.info(f">>> ALDEIA ATUAL: {vila['nome']}")
+            url = settings.BASE_URL + vila['link']
             
-            url_alvo = settings.BASE_URL + vila['link']
-            logger.info(f"Tentando carregar: {url_alvo}")
-            
-            driver.get(url_alvo)
-            logger.info("Pagina carregada. Iniciando leitura de recursos...")
-            
-            recursos = bot.obter_recursos()
-            if not recursos:
-                logger.error(f"[{vila['nome']}] Falha na leitura.")
-                continue
-            
-            logger.info(f"[{vila['nome']}] Recursos: {recursos}")
-            
-            if bot.contar_fila() >= 1:
-                logger.info(f"[{vila['nome']}] Fila ocupada.")
-            else:
-                menor_recurso = min(recursos, key=recursos.get)
-                logger.info(f"[{vila['nome']}] Prioridade: {menor_recurso}")
+            try:
+                logger.info(f"Navegando para: {url}")
+                driver.get(url)
                 
-                if bot.executar_construcao(menor_recurso):
-                    logger.info(f"[{vila['nome']}] ✅ SUCESSO REAL.")
-                else:
-                    logger.warning(f"[{vila['nome']}] ❌ FALHA REAL.")
+                # Screenshot de Seguranca (Ver o que carregou)
+                driver.save_screenshot(f"logs/last_page_{vila['nome'].replace(' ', '_')}.png")
+                logger.info(f"Pagina carregada. Foto salva em logs/last_page...")
+
+                recursos = bot.obter_recursos()
+                if not recursos:
+                    logger.warning("Nao consegui ler recursos. O Chrome pode estar em branco.")
+                    continue
+                
+                logger.info(f"Recursos lidos: {recursos}")
+                
+                obras = bot.contar_fila()
+                logger.info(f"Obras na fila: {obras}")
+
+                if obras < 1:
+                    menor = min(recursos, key=recursos.get)
+                    logger.info(f"Tentando evoluir: {menor}")
+                    bot.executar_construcao(menor)
+                
+            except Exception as e:
+                logger.error(f"Erro durante interacao na vila {vila['nome']}: {e}")
+                driver.save_screenshot(f"logs/ERRO_{vila['nome'].replace(' ', '_')}.png")
             
-            time.sleep(random.randint(5, 12))
+            time.sleep(random.randint(5, 10))
 
     except Exception as e:
-        logger.error(f"Erro critico: {e}")
+        logger.error(f"ERRO CRITICO NO MOTOR: {e}")
+        if driver: driver.save_screenshot("logs/CRITICAL_FAIL.png")
     finally:
         if driver:
             driver.quit()
-            logger.info("Navegador encerrado.")
+            logger.info("Ciclo finalizado. Driver encerrado.")
 
 if __name__ == "__main__":
-    logger.info(f"=== {settings.PROJECT_NAME} v1.0.6 ATIVADO ===")
-    while True:
-        try:
-            executar_ciclo()
-            espera = random.randint(settings.MIN_WAIT_LOOP, settings.MAX_WAIT_LOOP)
-            logger.info(f"DORMINDO: {espera//60} minutos.")
-            time.sleep(espera)
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            logger.error(f"Erro no loop: {e}")
-            time.sleep(60)
+    logger.info("=== INICIANDO SISTEMA DE DIAGNOSTICO v1.1.0 ===")
+    executar_ciclo()
