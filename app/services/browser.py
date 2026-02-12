@@ -8,20 +8,23 @@ class BrowserService:
     @staticmethod
     def obter_driver():
         options = uc.ChromeOptions()
+        # Removendo sandbox apenas se necessario, mantendo foco em ser indetectavel
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--headless=new")
         options.add_argument("--window-size=1920,1080")
         options.add_argument(f"--user-data-dir={settings.PROFILE_PATH}")
         
-        # Removemos o page_load_strategy eager para garantir estabilidade do JS
-        options.add_argument("--disable-gpu")
-        options.add_argument("--blink-settings=imagesEnabled=false") # Mantem sem imagens
+        # Flags para evitar o travamento do renderizador no Ubuntu
+        options.add_argument("--disable-browser-side-navigation")
+        options.add_argument("--disable-infobars")
+        options.add_argument("--force-device-scale-factor=1")
 
         try:
-            driver = uc.Chrome(options=options)
-            driver.set_page_load_timeout(30)
+            # UC cuida do bypass de automacao nativamente
+            driver = uc.Chrome(options=options, use_subprocess=True)
+            driver.set_page_load_timeout(60) 
             return driver
         except Exception as e:
-            logger.error(f"Erro no motor: {e}")
+            logger.error(f"Erro no motor UC: {e}")
             raise
