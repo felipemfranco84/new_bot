@@ -1,20 +1,81 @@
-def realizar_login(self, user, password):
-        try:
-            self.logger.info("Tentando realizar login...")
-            # Seletores baseados na imagem que voce enviou
-            campo_user = self.wait.until(EC.presence_of_element_located((By.NAME, "name")))
-            campo_pass = self.driver.find_element(By.NAME, "password")
-            botao_login = self.driver.find_element(By.NAME, "s1") # Geralmente o botao verde
+import logging
+import time
+import re
+import random
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-            campo_user.send_keys(user)
-            campo_pass.send_keys(password)
-            time.sleep(1)
-            botao_login.click()
+class BotService:
+    def __init__(self, driver):
+        self.driver = driver
+        self.wait = WebDriverWait(self.driver, 20)
+        self.logger = logging.getLogger("New_Bot.Logic")
+        self.mapa_gid = {"Madeira": "gid1", "Barro": "gid2", "Ferro": "gid3", "Trigo": "gid4"}
+
+    def realizar_login(self, user, password):
+        """Executa o login se o bot detectar que caiu na tela de entrada."""
+        try:
+            self.logger.info("Detectada tela de login. Autenticando...")
+            # Seletores baseados na estrutura de login do Travian Desktop
+            user_field = self.wait.until(EC.presence_of_element_located((By.NAME, "name")))
+            pass_field = self.driver.find_element(By.NAME, "password")
+            login_btn = self.driver.find_element(By.XPATH, "//button[@type='submit' or @name='s1']")
             
-            # Espera carregar a aldeia
+            user_field.clear()
+            user_field.send_keys(user)
+            pass_field.clear()
+            pass_field.send_keys(password)
+            
+            time.sleep(1)
+            login_btn.click()
+            
+            # Valida se entrou
             self.wait.until(EC.presence_of_element_located((By.ID, "l1")))
-            self.logger.info("Login realizado com sucesso!")
+            self.logger.info("Login realizado com sucesso.")
             return True
         except Exception as e:
-            self.logger.error(f"Falha ao logar: {e}")
+            self.logger.error(f"Erro no processo de login: {e}")
+            return False
+
+    def obter_recursos(self):
+        try:
+            self.wait.until(EC.presence_of_element_located((By.ID, "l1")))
+            recursos = {}
+            mapa_nomes = {1: "Madeira", 2: "Barro", 3: "Ferro", 4: "Trigo"}
+            for i in range(1, 5):
+                texto = self.driver.find_element(By.ID, f"l{i}").text
+                recursos[mapa_nomes[i]] = int(re.sub(r'\D', '', texto))
+            return recursos
+        except Exception:
+            return None
+
+    def contar_fila(self):
+        for seletor in [".buildingList li", ".constructionList li"]:
+            itens = self.driver.find_elements(By.CSS_SELECTOR, seletor)
+            if itens: return len(itens)
+        return 0
+
+    def executar_construcao(self, recurso):
+        try:
+            obras_antes = self.contar_fila()
+            gid = self.mapa_gid[recurso]
+            
+            campo = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, f".{gid}")))
+            self.driver.execute_script("arguments[0].click();", campo)
+            
+            time.sleep(random.uniform(2, 4))
+            
+            # Busca botões internos de evolução
+            xpath_btn = "//button[contains(., 'Melhorar') or contains(., 'Evoluir') or contains(., 'Construir')]"
+            botoes = self.driver.find_elements(By.XPATH, xpath_btn)
+            
+            if botoes:
+                self.driver.execute_script("arguments[0].click();", botoes[0])
+                time.sleep(5)
+                self.driver.get(self.driver.current_url.split('?')[0])
+                return self.contar_fila() > obras_antes
+            return False
+        except Exception as e:
+            self.logger.error(f"Erro na execucao: {e}")
             return False

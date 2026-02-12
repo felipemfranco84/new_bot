@@ -8,7 +8,7 @@ class Settings:
     USER: str = "felipemfranco@outlook.com"
     PASS: str = "SUA_SENHAQlydludg@1984"
     
-    # Caminho fixo para salvar cookies na VM (dentro da pasta do bot)
+    # Persistência de Cookies
     PROFILE_PATH: str = os.path.abspath("./app/core/user_data")
     
     VILAS = [
