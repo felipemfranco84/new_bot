@@ -7,7 +7,6 @@ from app.services.browser import BrowserService
 from app.services.bot import BotService
 from app.core.config import settings
 
-# Garante pasta de logs e persistencia
 os.makedirs("logs", exist_ok=True)
 os.makedirs(settings.PROFILE_PATH, exist_ok=True)
 
@@ -27,16 +26,23 @@ def executar_ciclo():
         for vila in settings.VILAS:
             logger.info(f"========== {vila['nome']} ==========")
             url_alvo = settings.BASE_URL + vila['link']
-            driver.get(url_alvo)
             
-            # CHECAGEM DE LOGIN: Se nao vir os recursos, tenta logar
+            try:
+                driver.get(url_alvo)
+                # Tira print imediatamente para debug se houver timeout parcial
+                driver.save_screenshot(f"logs/debug_{vila['nome'].replace(' ', '_')}.png")
+            except Exception as e:
+                logger.warning(f"Timeout no get, tentando prosseguir: {e}")
+                driver.save_screenshot("logs/timeout_debug.png")
+
+            # Checagem de Login
             if not bot.obter_recursos():
-                if "login.php" in driver.current_url or driver.find_elements(By.NAME, "password"):
+                if "login" in driver.current_url or len(driver.find_elements("name", "password")) > 0:
                     if not bot.realizar_login(settings.USER, settings.PASS):
-                        logger.error("Falha no login. Abortando vila.")
+                        logger.error("Falha no login.")
                         continue
                 else:
-                    logger.error("Nao foi possivel carregar a vila.")
+                    logger.error("Vila nao carregou corretamente.")
                     continue
             
             recursos = bot.obter_recursos()
@@ -46,13 +52,12 @@ def executar_ciclo():
                 logger.info("Fila ocupada.")
             else:
                 menor = min(recursos, key=recursos.get)
-                logger.info(f"Prioridade: {menor}")
                 if bot.executar_construcao(menor):
-                    logger.info("✅ SUCESSO CONFIRMADO.")
+                    logger.info("✅ SUCESSO.")
                 else:
-                    logger.warning("❌ FALHA NA ACAO.")
+                    logger.warning("❌ FALHA.")
             
-            time.sleep(random.randint(5, 12))
+            time.sleep(random.randint(5, 10))
 
     except Exception as e:
         logger.error(f"Erro critico no ciclo: {e}")
@@ -61,7 +66,7 @@ def executar_ciclo():
             driver.quit()
 
 if __name__ == "__main__":
-    logger.info(f"=== {settings.PROJECT_NAME} v1.2.1 INICIADO ===")
+    logger.info(f"=== {settings.PROJECT_NAME} v1.2.2 ATIVADO ===")
     while True:
         try:
             executar_ciclo()
